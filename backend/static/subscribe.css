@@ -1,0 +1,923 @@
+/* ==========================================
+   AI Karaoke Generator
+   Premium Subscription UI
+========================================== */
+
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+    font-family:"Segoe UI",Arial,sans-serif;
+}
+
+html{
+
+    scroll-behavior:smooth;
+
+}
+
+body{
+
+    min-height:100vh;
+
+    display:flex;
+
+    justify-content:center;
+
+    align-items:center;
+
+    padding:40px;
+
+    overflow-x:hidden;
+
+    background:
+    linear-gradient(
+    135deg,
+    #081229,
+    #0e3d67,
+    #00a2ff,
+    #081229);
+
+    background-size:400% 400%;
+
+    animation:bgAnimation 18s ease infinite;
+
+    position:relative;
+
+}
+
+/* ===========================
+   Animated Background
+=========================== */
+
+@keyframes bgAnimation{
+
+    0%{
+
+        background-position:0% 50%;
+
+    }
+
+    50%{
+
+        background-position:100% 50%;
+
+    }
+
+    100%{
+
+        background-position:0% 50%;
+
+    }
+
+}
+
+.bg-circle{
+
+    position:absolute;
+
+    border-radius:50%;
+
+    filter:blur(50px);
+
+    opacity:.35;
+
+    animation:float 12s infinite ease-in-out;
+
+}
+
+.circle1{
+
+    width:260px;
+
+    height:260px;
+
+    background:#00d4ff;
+
+    top:-80px;
+
+    left:-80px;
+
+}
+
+.circle2{
+
+    width:320px;
+
+    height:320px;
+
+    background:#6f5cff;
+
+    right:-120px;
+
+    bottom:60px;
+
+}
+
+.circle3{
+
+    width:220px;
+
+    height:220px;
+
+    background:#4cffc3;
+
+    left:45%;
+
+    bottom:-100px;
+
+}
+
+@keyframes float{
+
+    0%{
+
+        transform:translateY(0px);
+
+    }
+
+    50%{
+
+        transform:translateY(-35px);
+
+    }
+
+    100%{
+
+        transform:translateY(0px);
+
+    }
+
+}
+
+/* ===========================
+   Container
+=========================== */
+
+.container{
+
+    width:100%;
+
+    display:flex;
+
+    justify-content:center;
+
+    align-items:center;
+
+    position:relative;
+
+    z-index:2;
+
+}
+
+/* ===========================
+   Card
+=========================== */
+
+.card{
+
+    width:560px;
+
+    max-width:100%;
+
+    padding:40px;
+
+    border-radius:30px;
+
+    background:rgba(255,255,255,.15);
+
+    backdrop-filter:blur(20px);
+
+    -webkit-backdrop-filter:blur(20px);
+
+    border:1px solid rgba(255,255,255,.25);
+
+    box-shadow:
+
+    0 20px 60px rgba(0,0,0,.35);
+
+    color:white;
+
+}
+
+/* ===========================
+   Premium Badge
+=========================== */
+
+.premium-badge{
+
+    display:inline-block;
+
+    padding:10px 22px;
+
+    border-radius:50px;
+
+    background:linear-gradient(
+
+    90deg,
+
+    gold,
+
+    orange
+
+    );
+
+    color:#222;
+
+    font-weight:bold;
+
+    font-size:14px;
+
+    letter-spacing:1px;
+
+    margin-bottom:25px;
+
+    box-shadow:0 5px 20px rgba(255,193,7,.5);
+
+}
+
+/* ===========================
+   Header
+=========================== */
+
+.header{
+
+    text-align:center;
+
+    margin-bottom:30px;
+
+}
+
+.header h1{
+
+    font-size:38px;
+
+    margin-bottom:12px;
+
+    color:#fff;
+
+}
+
+.header p{
+
+    font-size:17px;
+
+    color:#d8eaff;
+
+}
+
+/* ===========================
+   Price Section
+=========================== */
+
+.price-section{
+
+    text-align:center;
+
+    margin-bottom:30px;
+
+    padding:25px;
+
+    border-radius:18px;
+
+    background:rgba(255,255,255,.08);
+
+}
+
+.price-section h2{
+
+    margin-bottom:12px;
+
+    color:white;
+
+}
+
+.price{
+
+    font-size:60px;
+
+    font-weight:800;
+
+    color:#ffd84d;
+
+    margin-bottom:8px;
+
+}
+
+.price span{
+
+    font-size:20px;
+
+    color:white;
+
+}
+
+.price-note{
+
+    color:#dbefff;
+
+    font-size:15px;
+
+}
+
+/* ===========================
+   Features
+=========================== */
+
+.features{
+
+    background:rgba(255,255,255,.08);
+
+    padding:22px;
+
+    border-radius:18px;
+
+    margin-bottom:28px;
+
+}
+
+.features h3{
+
+    margin-bottom:18px;
+
+    color:#fff;
+
+    text-align:center;
+
+}
+
+.features ul{
+
+    list-style:none;
+
+}
+
+.features li{
+
+    padding:12px 0;
+
+    border-bottom:1px solid rgba(255,255,255,.08);
+
+    color:#ecf6ff;
+
+    font-size:16px;
+
+}
+
+.features li:last-child{
+
+    border:none;
+
+}
+
+/* ===========================
+   Timeline
+=========================== */
+
+.timeline-box{
+
+    margin-bottom:30px;
+
+    background:rgba(255,255,255,.08);
+
+    border-radius:18px;
+
+    padding:20px;
+
+}
+
+.timeline-box h3{
+
+    text-align:center;
+
+    margin-bottom:20px;
+
+}
+
+.timeline{
+
+    display:flex;
+
+    align-items:center;
+
+    justify-content:center;
+
+}
+
+.step{
+
+    display:flex;
+
+    flex-direction:column;
+
+    align-items:center;
+
+}
+
+.step span{
+
+    width:42px;
+
+    height:42px;
+
+    border-radius:50%;
+
+    background:#ffffff30;
+
+    display:flex;
+
+    justify-content:center;
+
+    align-items:center;
+
+    font-weight:bold;
+
+    margin-bottom:8px;
+
+}
+
+.step.active span{
+
+    background:#00d084;
+
+    color:white;
+
+}
+
+.step p{
+
+    font-size:13px;
+
+    text-align:center;
+
+}
+
+.line{
+
+    width:50px;
+
+    height:3px;
+
+    background:#ffffff40;
+
+    margin:0 10px;
+
+}
+
+/* ===========================
+   Payment Box
+=========================== */
+
+.payment-box{
+
+    margin-bottom:25px;
+
+    text-align:center;
+
+    background:rgba(255,255,255,.08);
+
+    border-radius:18px;
+
+    padding:22px;
+
+}
+
+.payment-box h3{
+
+    margin-bottom:10px;
+
+}
+
+.payment-box p{
+
+    color:#e3f3ff;
+
+    margin-bottom:20px;
+
+    line-height:1.5;
+
+}
+
+.qr{
+
+    width:240px;
+
+    height:240px;
+
+    object-fit:contain;
+
+    background:white;
+
+    border-radius:20px;
+
+    padding:12px;
+
+    border:4px solid white;
+
+    transition:.35s;
+
+}
+
+.qr:hover{
+
+    transform:scale(1.04);
+
+    box-shadow:0 0 30px rgba(255,255,255,.4);
+
+}
+
+/* ===========================
+   Labels
+=========================== */
+
+label{
+
+    display:block;
+
+    margin-top:18px;
+
+    margin-bottom:8px;
+
+    font-weight:bold;
+
+    color:white;
+
+}
+
+/* ===========================
+   Input
+=========================== */
+
+input{
+
+    width:100%;
+
+    padding:15px;
+
+    border:none;
+
+    border-radius:12px;
+
+    font-size:16px;
+
+    background:white;
+
+    outline:none;
+
+    transition:.3s;
+
+}
+
+input:focus{
+
+    box-shadow:0 0 0 4px rgba(0,174,255,.35);
+
+}
+
+/* ===========================
+   UPI Row
+=========================== */
+
+.upi-row{
+
+    display:flex;
+
+    gap:12px;
+
+    margin-bottom:10px;
+
+}
+
+.upi-row input{
+
+    flex:1;
+
+}
+
+/* ===========================
+   Buttons
+=========================== */
+
+button{
+
+    cursor:pointer;
+
+    border:none;
+
+    border-radius:14px;
+
+    font-size:16px;
+
+    font-weight:700;
+
+    transition:.35s;
+
+}
+
+/* Copy Button */
+
+#copyBtn{
+
+    width:120px;
+
+    background:linear-gradient(135deg,#2196f3,#0066ff);
+
+    color:white;
+
+}
+
+#copyBtn:hover{
+
+    transform:translateY(-2px);
+
+    box-shadow:0 10px 20px rgba(33,150,243,.35);
+
+}
+
+/* Pay Button */
+
+.pay-btn{
+
+    width:100%;
+
+    margin-top:25px;
+
+    padding:16px;
+
+    color:white;
+
+    font-size:18px;
+
+    background:linear-gradient(135deg,#00c853,#00e676);
+
+    box-shadow:0 10px 25px rgba(0,200,83,.35);
+
+}
+
+.pay-btn:hover{
+
+    transform:translateY(-3px);
+
+    box-shadow:0 18px 35px rgba(0,200,83,.45);
+
+}
+
+/* Dashboard Button */
+
+.back-btn{
+
+    width:100%;
+
+    margin-top:18px;
+
+    padding:16px;
+
+    background:linear-gradient(135deg,#546e7a,#37474f);
+
+    color:white;
+
+}
+
+.back-btn:hover{
+
+    transform:translateY(-3px);
+
+    box-shadow:0 15px 30px rgba(0,0,0,.35);
+
+}
+
+/* Disabled Button */
+
+button:disabled{
+
+    opacity:.6;
+
+    cursor:not-allowed;
+
+    transform:none;
+
+    box-shadow:none;
+
+}
+
+/* ===========================
+   Status Box
+=========================== */
+
+.status{
+
+    margin-top:28px;
+
+    padding:22px;
+
+    border-radius:18px;
+
+    background:rgba(255,255,255,.10);
+
+    border:1px solid rgba(255,255,255,.15);
+
+    color:white;
+
+    line-height:1.8;
+
+    font-size:15px;
+
+    text-align:left;
+
+    min-height:110px;
+
+    animation:fadeIn .5s ease;
+
+    word-break:break-word;
+
+}
+
+.status b{
+
+    color:#ffe066;
+
+}
+
+/* ===========================
+   Security Box
+=========================== */
+
+.security-box{
+
+    margin-top:22px;
+
+    padding:18px;
+
+    text-align:center;
+
+    border-radius:16px;
+
+    background:rgba(0,0,0,.18);
+
+    border:1px solid rgba(255,255,255,.12);
+
+    color:#dff8ff;
+
+    font-size:15px;
+
+    line-height:1.7;
+
+}
+
+/* ===========================
+   Fade Animation
+=========================== */
+
+@keyframes fadeIn{
+
+    from{
+
+        opacity:0;
+
+        transform:translateY(15px);
+
+    }
+
+    to{
+
+        opacity:1;
+
+        transform:translateY(0);
+
+    }
+
+}
+
+/* ===========================
+   Card Animation
+=========================== */
+
+.card{
+
+    animation:cardShow .8s ease;
+
+}
+
+@keyframes cardShow{
+
+    from{
+
+        opacity:0;
+
+        transform:translateY(40px) scale(.95);
+
+    }
+
+    to{
+
+        opacity:1;
+
+        transform:translateY(0) scale(1);
+
+    }
+
+}
+
+/* ===========================
+   Responsive
+=========================== */
+
+@media(max-width:768px){
+
+    body{
+
+        padding:20px;
+
+    }
+
+    .card{
+
+        padding:25px;
+
+        border-radius:22px;
+
+    }
+
+    .header h1{
+
+        font-size:30px;
+
+    }
+
+    .price{
+
+        font-size:48px;
+
+    }
+
+    .qr{
+
+        width:200px;
+
+        height:200px;
+
+    }
+
+    .timeline{
+
+        flex-wrap:wrap;
+
+        gap:15px;
+
+    }
+
+    .line{
+
+        display:none;
+
+    }
+
+    .upi-row{
+
+        flex-direction:column;
+
+    }
+
+    #copyBtn{
+
+        width:100%;
+
+        padding:14px;
+
+    }
+
+}
+
+@media(max-width:480px){
+
+    .header h1{
+
+        font-size:25px;
+
+    }
+
+    .price{
+
+        font-size:40px;
+
+    }
+
+    .features li{
+
+        font-size:14px;
+
+    }
+
+    .status{
+
+        font-size:14px;
+
+    }
+
+    .security-box{
+
+        font-size:14px;
+
+    }
+
+}

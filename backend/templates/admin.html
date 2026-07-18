@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta name="viewport"
+content="width=device-width, initial-scale=1.0">
+
+<title>Admin Dashboard</title>
+
+<link rel="stylesheet" href="/static/admin.css">
+
+</head>
+
+<body>
+
+<div class="sidebar">
+
+    <h2>🎵 JoshAI Karaoke</h2>
+
+    <ul>
+
+        <li class="active">Dashboard</li>
+
+        <li id="pendingBtn">Pending Payments</li>
+
+        <li id="usersBtn">Users</li>
+
+        <li id="historyBtn">History</li>
+
+        <li id="logoutBtn">Logout</li>
+
+    </ul>
+
+</div>
+
+
+<div class="main">
+
+    <h1>Administrator Dashboard</h1>
+
+    <div class="cards">
+
+        <div class="card">
+
+            <h2 id="totalUsers">0</h2>
+
+            <p>Total Users</p>
+
+        </div>
+
+        <div class="card">
+
+            <h2 id="activeUsers">0</h2>
+
+            <p>Active Subscribers</p>
+
+        </div>
+
+        <div class="card">
+
+            <h2 id="pendingPayments">0</h2>
+
+            <p>Pending Payments</p>
+
+        </div>
+
+    </div>
+
+    <h2>Pending Payments</h2>
+
+    <table>
+
+        <thead>
+
+        <tr>
+
+            <th>ID</th>
+            <th>User ID</th>
+            <th>Transaction ID</th>
+            <th>Amount</th>
+            <th>Status</th>
+            <th>Action</th>
+
+        </tr>
+
+        </thead>
+
+        <tbody id="paymentTable">
+
+        </tbody>
+
+    </table>
+
+</div>
+
+<script src="/static/admin.js"></script>
+
+</body>
+
+</html>

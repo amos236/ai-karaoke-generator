@@ -1,0 +1,206 @@
+/* ===========================
+   Reset
+=========================== */
+
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+    font-family:Arial, Helvetica, sans-serif;
+}
+
+/* ===========================
+   Body
+=========================== */
+
+body{
+
+    background:linear-gradient(135deg,#4facfe,#00f2fe);
+
+    display:flex;
+
+    justify-content:center;
+
+    align-items:center;
+
+    height:100vh;
+
+}
+
+/* ===========================
+   Container
+=========================== */
+
+.container{
+
+    width:100%;
+
+    display:flex;
+
+    justify-content:center;
+
+    align-items:center;
+
+}
+
+/* ===========================
+   Card
+=========================== */
+
+.card{
+
+    width:420px;
+
+    background:white;
+
+    padding:40px;
+
+    border-radius:20px;
+
+    text-align:center;
+
+    box-shadow:0 15px 35px rgba(0,0,0,.2);
+
+}
+
+/* ===========================
+   Headings
+=========================== */
+
+.card h1{
+
+    color:#333;
+
+    margin-bottom:10px;
+
+}
+
+.card h2{
+
+    color:#666;
+
+    margin-bottom:30px;
+
+}
+
+/* ===========================
+   Input
+=========================== */
+
+input{
+
+    width:100%;
+
+    padding:15px;
+
+    margin-bottom:20px;
+
+    border:2px solid #ddd;
+
+    border-radius:10px;
+
+    font-size:16px;
+
+    outline:none;
+
+}
+
+input:focus{
+
+    border-color:#4facfe;
+
+}
+
+/* ===========================
+   Button
+=========================== */
+
+button{
+
+    width:100%;
+
+    padding:15px;
+
+    border:none;
+
+    border-radius:10px;
+
+    background:#4facfe;
+
+    color:white;
+
+    font-size:18px;
+
+    font-weight:bold;
+
+    cursor:pointer;
+
+    transition:.3s;
+
+}
+
+button:hover{
+
+    background:#008cff;
+
+}
+
+/* ===========================
+   Status
+=========================== */
+
+#status{
+
+    margin-top:20px;
+
+    font-weight:bold;
+
+    color:#333;
+
+    min-height:25px;
+
+}
+
+/* ===========================
+   Register
+=========================== */
+
+.register-text{
+
+    margin-top:25px;
+
+    color:#555;
+
+}
+
+.register-text a{
+
+    color:#008cff;
+
+    text-decoration:none;
+
+    font-weight:bold;
+
+}
+
+.register-text a:hover{
+
+    text-decoration:underline;
+
+}
+
+/* ===========================
+   Mobile
+=========================== */
+
+@media(max-width:600px){
+
+.card{
+
+    width:90%;
+
+    padding:25px;
+
+}
+
+}
