@@ -6,15 +6,26 @@ from database import get_db
 from models import User
 
 
+# ============================================================
+# ROUTER
+# ============================================================
+
 router = APIRouter()
 
 
-# Password hashing configuration
+# ============================================================
+# PASSWORD HASHING
+# ============================================================
+
 pwd_context = CryptContext(
     schemes=["bcrypt"],
     deprecated="auto"
 )
 
+
+# ============================================================
+# LOGIN API
+# ============================================================
 
 @router.post("/login")
 def login(
@@ -23,32 +34,59 @@ def login(
     db: Session = Depends(get_db)
 ):
 
-    # Find user by username
+    # --------------------------------------------------------
+    # FIND USER BY USERNAME
+    # --------------------------------------------------------
+
     user = db.query(User).filter(
         User.username == username
     ).first()
 
-    # Username not found
+
+    # --------------------------------------------------------
+    # CHECK USER EXISTS
+    # --------------------------------------------------------
+
     if user is None:
         raise HTTPException(
             status_code=401,
             detail="Invalid Username."
         )
 
-    # Verify password
+
+    # --------------------------------------------------------
+    # BCRYPT PASSWORD LIMIT
     # bcrypt supports a maximum of 72 bytes
+    # --------------------------------------------------------
+
     password_to_verify = password[:72]
 
-    if not pwd_context.verify(
+
+    # --------------------------------------------------------
+    # VERIFY PASSWORD
+    # --------------------------------------------------------
+
+    password_valid = pwd_context.verify(
         password_to_verify,
         user.password
-    ):
+    )
+
+
+    # --------------------------------------------------------
+    # INVALID PASSWORD
+    # --------------------------------------------------------
+
+    if not password_valid:
         raise HTTPException(
             status_code=401,
             detail="Invalid Password."
         )
 
-    # Login successful
+
+    # --------------------------------------------------------
+    # LOGIN SUCCESSFUL
+    # --------------------------------------------------------
+
     return {
         "success": True,
         "message": "Login Successful",
