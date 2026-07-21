@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from passlib.context import CryptContext
+from argon2 import PasswordHasher
+from argon2.exceptions import VerifyMismatchError
 
 from database import get_db
 from models import User
@@ -8,12 +9,8 @@ from models import User
 
 router = APIRouter()
 
-
-# Password hashing configuration
-pwd_context = CryptContext(
-    schemes=["bcrypt"],
-    deprecated="auto"
-)
+# Password hashing
+pwd_hasher = PasswordHasher()
 
 
 @router.post("/register")
@@ -24,9 +21,7 @@ def register(
     db: Session = Depends(get_db)
 ):
 
-    # -----------------------------------------
-    # 1. Check if username already exists
-    # -----------------------------------------
+    # Check username
     user = db.query(User).filter(
         User.username == username
     ).first()
@@ -37,10 +32,7 @@ def register(
             detail="Username already exists."
         )
 
-
-    # -----------------------------------------
-    # 2. Check if email already exists
-    # -----------------------------------------
+    # Check email
     email_user = db.query(User).filter(
         User.email == email
     ).first()
@@ -51,43 +43,20 @@ def register(
             detail="Email already exists."
         )
 
+    # Hash password using Argon2
+    hashed_password = pwd_hasher.hash(password)
 
-    # -----------------------------------------
-    # 3. Limit password to 72 bytes
-    # bcrypt supports a maximum of 72 bytes
-    # -----------------------------------------
-    password = password[:72]
-
-
-    # -----------------------------------------
-    # 4. Hash password
-    # -----------------------------------------
-    hashed_password = pwd_context.hash(password)
-
-
-    # -----------------------------------------
-    # 5. Create new user
-    # -----------------------------------------
+    # Create new user
     new_user = User(
         username=username,
         email=email,
         password=hashed_password
     )
 
-
-    # -----------------------------------------
-    # 6. Save user to database
-    # -----------------------------------------
     db.add(new_user)
-
     db.commit()
-
     db.refresh(new_user)
 
-
-    # -----------------------------------------
-    # 7. Return success response
-    # -----------------------------------------
     return {
         "success": True,
         "message": "Registration Successful"
