@@ -47,7 +47,7 @@ def register(
             detail="Email already exists."
         )
 
-    hashed_password = pwd_context.hash(password)
+   hashed_password = pwd_context.hash(password[:72])
 
     new_user = User(
         username=username,
