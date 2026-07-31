@@ -1,4 +1,11 @@
-from fastapi import FastAPI, UploadFile, File, HTTPException, Form
+from fastapi import (
+    FastAPI,
+    UploadFile,
+    File,
+    HTTPException,
+    Form
+)
+
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -6,6 +13,7 @@ import os
 import shutil
 import uuid
 import threading
+import glob
 
 from database import engine, SessionLocal
 from models import Base, User, History
@@ -19,26 +27,26 @@ from admin import router as admin_router
 from services.demucs_service import convert_to_karaoke
 
 
-# ==========================================
-# Create Database
-# ==========================================
+# =====================================================
+# Create Database Tables
+# =====================================================
 
 Base.metadata.create_all(bind=engine)
 
 
-# ==========================================
-# FastAPI
-# ==========================================
+# =====================================================
+# FastAPI App
+# =====================================================
 
 app = FastAPI(
-    title="AI Karaoke Generator",
-    version="2.0"
+    title="JoshAI Karaoke Generator",
+    version="3.0"
 )
 
 
-# ==========================================
-# Routers
-# ==========================================
+# =====================================================
+# Include Routers
+# =====================================================
 
 app.include_router(auth_router)
 app.include_router(login_router)
@@ -47,20 +55,22 @@ app.include_router(payment_router)
 app.include_router(admin_router)
 
 
-# ==========================================
-# Folders
-# ==========================================
+# =====================================================
+# Folder Configuration
+# =====================================================
 
 UPLOAD_FOLDER = "uploads"
 OUTPUT_FOLDER = "ai_output"
 
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(OUTPUT_FOLDER, exist_ok=True)
+os.makedirs("static", exist_ok=True)
+os.makedirs("templates", exist_ok=True)
 
 
-# ==========================================
+# =====================================================
 # Static Files
-# ==========================================
+# =====================================================
 
 app.mount(
     "/static",
@@ -69,12 +79,9 @@ app.mount(
 )
 
 
-# ==========================================
+# =====================================================
 # HTML Pages
-# ==========================================
-# ==========================================
-# HTML Pages
-# ==========================================
+# =====================================================
 
 @app.get("/")
 async def home():
@@ -82,7 +89,7 @@ async def home():
 
 
 @app.get("/index.html")
-async def home_html():
+async def index_page():
     return FileResponse("templates/index.html")
 
 
@@ -97,7 +104,7 @@ async def register_page():
 
 
 @app.get("/dashboard")
-async def dashboard():
+async def dashboard_page():
     return FileResponse("templates/dashboard.html")
 
 
@@ -120,50 +127,100 @@ async def admin_login():
 async def upload_page():
     return FileResponse("templates/upload.html")
 
-from fastapi.responses import FileResponse
 
 @app.get("/favicon.ico", include_in_schema=False)
 async def favicon():
     return FileResponse("static/AILOGO.ico")
 
 
-# ==========================================
-# Job Storage
-# ==========================================
+# =====================================================
+# Health Check
+# =====================================================
+
+@app.get("/health")
+async def health():
+    return {
+        "status": "running",
+        "message": "JoshAI Karaoke Generator API"
+    }
+
+
+# =====================================================
+# Temporary Job Storage
+# =====================================================
 
 jobs = {}
 
-# ==========================================
+
+# =====================================================
+# Utility
+# =====================================================
+
+def delete_file(path):
+    try:
+        if os.path.exists(path):
+            os.remove(path)
+    except Exception:
+        pass
+
+
+def delete_folder(path):
+    try:
+        if os.path.exists(path):
+            shutil.rmtree(path)
+    except Exception:
+        pass
+
+# =====================================================
 # Background Worker
-# ==========================================
+# =====================================================
 
 def process_song(job_id: str, file_path: str):
 
     try:
 
-        print("\n===================================")
-        print("Processing Job :", job_id)
-        print("Song :", file_path)
-        print("===================================\n")
+        print("\n========================================")
+        print("Starting Job :", job_id)
+        print("Input File   :", file_path)
+        print("========================================")
 
-        # Change Status
+        if job_id not in jobs:
+            return
+
         jobs[job_id]["status"] = "processing"
 
-        # Convert Song
+        # -------------------------------------
+        # Run Demucs
+        # -------------------------------------
+
         karaoke_file = convert_to_karaoke(file_path)
 
-        # Save Job Result
+        # -------------------------------------
+        # Verify Output
+        # -------------------------------------
+
+        if not os.path.exists(karaoke_file):
+
+            raise Exception(
+                "Karaoke file was not generated."
+            )
+
         jobs[job_id]["status"] = "completed"
+
         jobs[job_id]["karaoke"] = karaoke_file
+
         jobs[job_id]["song"] = os.path.splitext(
             os.path.basename(file_path)
         )[0]
 
-        print("Job Completed :", job_id)
+        print("\n========================================")
+        print("Job Completed")
+        print("Output :", karaoke_file)
+        print("========================================")
 
-        # =====================================
+        # -------------------------------------
         # Save History
-        # =====================================
+        # -------------------------------------
 
         try:
 
@@ -185,91 +242,87 @@ def process_song(job_id: str, file_path: str):
 
             db.close()
 
-            print("History Saved")
+            print("History Saved Successfully")
 
-        except Exception as e:
+        except Exception as history_error:
 
-            print("History Error :", e)
+            print("History Error :", history_error)
 
-        # =====================================
-        # Delete Uploaded File
-        # =====================================
+        # -------------------------------------
+        # Delete Uploaded MP3
+        # -------------------------------------
 
-        try:
-
-            os.remove(file_path)
-
-        except Exception:
-
-            pass
+        delete_file(file_path)
 
     except Exception as e:
 
-        jobs[job_id]["status"] = "failed"
+        print("\n========================================")
+        print("JOB FAILED")
+        print(e)
+        print("========================================")
 
-        jobs[job_id]["error"] = str(e)
+        if job_id in jobs:
 
-        print("Job Failed :", e)
+            jobs[job_id]["status"] = "failed"
 
-        # ==========================================
+            jobs[job_id]["error"] = str(e)
+
+        delete_file(file_path)
+
+# =====================================================
 # Upload API
-# ==========================================
-
-# ==========================================
-# Upload API
-# ==========================================
+# =====================================================
 
 @app.post("/upload")
 async def upload(
-
     user_id: int = Form(...),
-
     file: UploadFile = File(...)
-
 ):
-    print("UPLOAD API CALLED")
+
+    print("\n========== UPLOAD REQUEST ==========")
+
+    db = SessionLocal()
 
     try:
 
-        # -----------------------------
-        # Check User
-        # -----------------------------
-
-        db = SessionLocal()
+        # -------------------------------------
+        # User Check
+        # -------------------------------------
 
         user = db.query(User).filter(
             User.id == user_id
         ).first()
 
-        if not user:
-
-            db.close()
+        if user is None:
 
             raise HTTPException(
                 status_code=404,
                 detail="User not found."
             )
 
-        # -----------------------------
-        # Check Subscription
-        # -----------------------------
+        # -------------------------------------
+        # Subscription Check
+        # -------------------------------------
 
-        if user.role != "admin":
+        if user.role.lower() != "admin":
 
             if user.subscription_status.lower() != "active":
 
-                db.close()
-
                 raise HTTPException(
                     status_code=403,
-                    detail="Please purchase a subscription."
+                    detail="Subscription required."
                 )
 
-        db.close()
+        # -------------------------------------
+        # File Validation
+        # -------------------------------------
 
-        # -----------------------------
-        # Check MP3
-        # -----------------------------
+        if file.filename is None:
+
+            raise HTTPException(
+                status_code=400,
+                detail="No file selected."
+            )
 
         if not file.filename.lower().endswith(".mp3"):
 
@@ -278,11 +331,13 @@ async def upload(
                 detail="Only MP3 files are allowed."
             )
 
-        # -----------------------------
-        # Save File
-        # -----------------------------
+        # -------------------------------------
+        # Save Uploaded File
+        # -------------------------------------
 
-        filename = str(uuid.uuid4()) + "_" + file.filename
+        unique_name = str(uuid.uuid4())
+
+        filename = unique_name + ".mp3"
 
         filepath = os.path.join(
             UPLOAD_FOLDER,
@@ -296,15 +351,15 @@ async def upload(
                 buffer
             )
 
-        # -----------------------------
-        # Create Job
-        # -----------------------------
+        # -------------------------------------
+        # Create Job BEFORE Starting Thread
+        # -------------------------------------
 
         job_id = str(uuid.uuid4())
 
         jobs[job_id] = {
 
-            "user_id": user_id,
+            "user_id": user.id,
 
             "status": "queued",
 
@@ -316,9 +371,9 @@ async def upload(
 
         }
 
-        # -----------------------------
-        # Background Thread
-        # -----------------------------
+        # -------------------------------------
+        # Start Background Thread
+        # -------------------------------------
 
         thread = threading.Thread(
 
@@ -332,7 +387,7 @@ async def upload(
 
         thread.start()
 
-        print("New Job :", job_id)
+        print("Job Created :", job_id)
 
         return {
 
@@ -340,36 +395,30 @@ async def upload(
 
             "job_id": job_id,
 
-            "message": "Upload Successful."
+            "status": "queued"
 
         }
 
-    except HTTPException:
+    finally:
 
-        raise
+        db.close()
 
-    except Exception as e:
 
-        raise HTTPException(
-
-            status_code=500,
-
-            detail=str(e)
-
-        )
-
-        # ===================================================
+# =====================================================
 # Status API
-# ===================================================
+# =====================================================
 
 @app.get("/status/{job_id}")
-async def status(job_id: str):
+async def get_status(job_id: str):
 
     if job_id not in jobs:
 
         raise HTTPException(
+
             status_code=404,
-            detail="Job not found."
+
+            detail="Invalid Job ID."
+
         )
 
     job = jobs[job_id]
@@ -377,6 +426,8 @@ async def status(job_id: str):
     return {
 
         "success": True,
+
+        "job_id": job_id,
 
         "status": job["status"],
 
@@ -387,9 +438,9 @@ async def status(job_id: str):
     }
 
 
-# ===================================================
+# =====================================================
 # Download API
-# ===================================================
+# =====================================================
 
 @app.get("/download/{job_id}")
 async def download(job_id: str):
@@ -397,17 +448,33 @@ async def download(job_id: str):
     if job_id not in jobs:
 
         raise HTTPException(
+
             status_code=404,
-            detail="Job not found."
+
+            detail="Invalid Job ID."
+
         )
 
     job = jobs[job_id]
 
+    if job["status"] == "failed":
+
+        raise HTTPException(
+
+            status_code=400,
+
+            detail=job["error"]
+
+        )
+
     if job["status"] != "completed":
 
         raise HTTPException(
+
             status_code=400,
+
             detail="Song is still processing."
+
         )
 
     karaoke_file = job["karaoke"]
@@ -415,15 +482,21 @@ async def download(job_id: str):
     if karaoke_file is None:
 
         raise HTTPException(
+
             status_code=404,
+
             detail="Karaoke file missing."
+
         )
 
     if not os.path.exists(karaoke_file):
 
         raise HTTPException(
+
             status_code=404,
-            detail="Karaoke file not found."
+
+            detail="Output file not found."
+
         )
 
     return FileResponse(

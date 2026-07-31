@@ -1,31 +1,42 @@
-// ===========================================
-// AI Karaoke Generator
-// Upload Script
-// ===========================================
+// =========================================
+// JoshAI Karaoke Generator
+// =========================================
 
 const convertBtn = document.getElementById("convertBtn");
 const songFile = document.getElementById("songFile");
-const status = document.getElementById("status");
+
+const statusBox = document.getElementById("status");
+const progressBar = document.querySelector(".bar");
+const percent = document.querySelector(".percent");
+
 const downloadSection = document.getElementById("downloadSection");
 const downloadLink = document.getElementById("downloadLink");
 
-const API_URL = window.location.origin;
+let timer = null;
 
-const userId = localStorage.getItem("user_id");
-
-if (!userId) {
-
-    alert("Please login first.");
-
-    location.href = "/login";
-
-}
+// =========================================
+// Convert Button
+// =========================================
 
 convertBtn.addEventListener("click", async () => {
 
-    if (songFile.files.length === 0) {
+    const file = songFile.files[0];
 
-        alert("Please select MP3 file.");
+    if (!file) {
+
+        alert("Please choose an MP3 file.");
+
+        return;
+
+    }
+
+    const userId = localStorage.getItem("user_id");
+
+    if (!userId) {
+
+        alert("Please login first.");
+
+        window.location = "/login";
 
         return;
 
@@ -33,15 +44,19 @@ convertBtn.addEventListener("click", async () => {
 
     convertBtn.disabled = true;
 
-    status.innerHTML = "Uploading...";
-
     downloadSection.style.display = "none";
+
+    progressBar.style.width = "5%";
+
+    statusBox.innerHTML = "Uploading...";
+
+    percent.innerHTML = "Uploading MP3...";
 
     const formData = new FormData();
 
     formData.append("user_id", userId);
 
-    formData.append("file", songFile.files[0]);
+    formData.append("file", file);
 
     try {
 
@@ -55,31 +70,25 @@ convertBtn.addEventListener("click", async () => {
 
         const data = await response.json();
 
-        console.log("SERVER RESPONSE");
-
-        console.log(data);
-
         if (!response.ok) {
 
-            alert(JSON.stringify(data, null, 2));
-
-            throw new Error(
-                JSON.stringify(data)
-            );
+            throw new Error(data.detail);
 
         }
 
-        status.innerHTML = "Processing...";
+        statusBox.innerHTML = "Upload Successful";
+
+        progressBar.style.width = "15%";
+
+        percent.innerHTML = "Waiting for AI...";
 
         checkStatus(data.job_id);
 
     }
 
-    catch (e) {
+    catch (err) {
 
-        console.error(e);
-
-        status.innerHTML = e.message;
+        alert(err.message);
 
         convertBtn.disabled = false;
 
@@ -87,38 +96,109 @@ convertBtn.addEventListener("click", async () => {
 
 });
 
-async function checkStatus(jobId){
 
-    const timer = setInterval(async()=>{
+// =========================================
+// Status Polling
+// =========================================
 
-        const response = await fetch(`/status/${jobId}`);
+function checkStatus(jobId) {
 
-        const data = await response.json();
+    if (timer) {
 
-        if(data.status==="completed"){
+        clearInterval(timer);
 
-            clearInterval(timer);
+    }
 
-            status.innerHTML="Completed";
+    timer = setInterval(async () => {
 
-            downloadSection.style.display="block";
+        try {
 
-            downloadLink.href=`/download/${jobId}`;
+            const response = await fetch(`/status/${jobId}`);
 
-            convertBtn.disabled=false;
+            if (response.status === 404) {
+
+                clearInterval(timer);
+
+                statusBox.innerHTML = "Job Not Found";
+
+                percent.innerHTML = "Server lost the job.";
+
+                convertBtn.disabled = false;
+
+                return;
+
+            }
+
+            const data = await response.json();
+
+            console.log(data);
+
+            if (data.status === "queued") {
+
+                progressBar.style.width = "20%";
+
+                statusBox.innerHTML = "Queued";
+
+                percent.innerHTML = "Waiting in queue...";
+
+            }
+
+            else if (data.status === "processing") {
+
+                progressBar.style.width = "70%";
+
+                statusBox.innerHTML = "Processing";
+
+                percent.innerHTML = "Removing vocals...";
+
+            }
+
+            else if (data.status === "completed") {
+
+                clearInterval(timer);
+
+                progressBar.style.width = "100%";
+
+                statusBox.innerHTML = "Completed";
+
+                percent.innerHTML = "Download Ready";
+
+                downloadLink.href = `/download/${jobId}`;
+
+                downloadSection.style.display = "block";
+
+                convertBtn.disabled = false;
+
+            }
+
+            else if (data.status === "failed") {
+
+                clearInterval(timer);
+
+                progressBar.style.width = "100%";
+
+                statusBox.innerHTML = "Failed";
+
+                percent.innerHTML = data.error;
+
+                alert(data.error);
+
+                convertBtn.disabled = false;
+
+            }
 
         }
 
-        if(data.status==="failed"){
+        catch (err) {
 
             clearInterval(timer);
 
-            status.innerHTML=data.error;
+            console.log(err);
 
-            convertBtn.disabled=false;
+            convertBtn.disabled = false;
 
         }
 
-    },3000);
+    }, 3000);
 
 }
