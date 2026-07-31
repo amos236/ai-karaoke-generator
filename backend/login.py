@@ -1,31 +1,16 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from passlib.context import CryptContext
+
+from argon2 import PasswordHasher
+from argon2.exceptions import VerifyMismatchError, VerificationError
 
 from database import get_db
 from models import User
 
-
-# ============================================================
-# ROUTER
-# ============================================================
-
 router = APIRouter()
 
+pwd_hasher = PasswordHasher()
 
-# ============================================================
-# PASSWORD HASHING
-# ============================================================
-
-pwd_context = CryptContext(
-    schemes=["bcrypt"],
-    deprecated="auto"
-)
-
-
-# ============================================================
-# LOGIN API
-# ============================================================
 
 @router.post("/login")
 def login(
@@ -34,18 +19,11 @@ def login(
     db: Session = Depends(get_db)
 ):
 
-    # --------------------------------------------------------
-    # FIND USER BY USERNAME
-    # --------------------------------------------------------
+    username = username.strip()
 
     user = db.query(User).filter(
         User.username == username
     ).first()
-
-
-    # --------------------------------------------------------
-    # CHECK USER EXISTS
-    # --------------------------------------------------------
 
     if user is None:
         raise HTTPException(
@@ -53,39 +31,31 @@ def login(
             detail="Invalid Username."
         )
 
+    try:
+        pwd_hasher.verify(user.password, password)
 
-    # --------------------------------------------------------
-    # BCRYPT PASSWORD LIMIT
-    # bcrypt supports a maximum of 72 bytes
-    # --------------------------------------------------------
-
-    password_to_verify = password[:72]
-
-
-    # --------------------------------------------------------
-    # VERIFY PASSWORD
-    # --------------------------------------------------------
-
-    password_valid = pwd_context.verify(
-        password_to_verify,
-        user.password
-    )
-
-
-    # --------------------------------------------------------
-    # INVALID PASSWORD
-    # --------------------------------------------------------
-
-    if not password_valid:
+    except VerifyMismatchError:
         raise HTTPException(
             status_code=401,
             detail="Invalid Password."
         )
 
+    except VerificationError:
+        raise HTTPException(
+            status_code=500,
+            detail="Password verification failed."
+        )
 
-    # --------------------------------------------------------
-    # LOGIN SUCCESSFUL
-    # --------------------------------------------------------
+    except Exception:
+        raise HTTPException(
+            status_code=500,
+            detail="Login failed."
+        )
+
+    # Rehash password if Argon2 parameters have changed
+    if pwd_hasher.check_needs_rehash(user.password):
+        user.password = pwd_hasher.hash(password)
+        db.commit()
 
     return {
         "success": True,
