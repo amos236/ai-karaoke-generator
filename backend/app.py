@@ -13,29 +13,29 @@ import os
 import shutil
 import uuid
 import threading
-import glob
+import traceback
 
 from database import engine, SessionLocal
 from models import Base, User, History
 
 from auth import router as auth_router
 from login import router as login_router
-from profile import router as profile_router
+from user_profile import router as profile_router
 from payment import router as payment_router
 from admin import router as admin_router
 
 from services.demucs_service import convert_to_karaoke
-
+from sqlalchemy.orm import Session
 
 # =====================================================
-# Create Database Tables
+# DATABASE
 # =====================================================
 
 Base.metadata.create_all(bind=engine)
 
 
 # =====================================================
-# FastAPI App
+# FASTAPI
 # =====================================================
 
 app = FastAPI(
@@ -45,7 +45,7 @@ app = FastAPI(
 
 
 # =====================================================
-# Include Routers
+# ROUTERS
 # =====================================================
 
 app.include_router(auth_router)
@@ -56,7 +56,7 @@ app.include_router(admin_router)
 
 
 # =====================================================
-# Folder Configuration
+# FOLDERS
 # =====================================================
 
 UPLOAD_FOLDER = "uploads"
@@ -69,7 +69,7 @@ os.makedirs("templates", exist_ok=True)
 
 
 # =====================================================
-# Static Files
+# STATIC FILES
 # =====================================================
 
 app.mount(
@@ -80,7 +80,7 @@ app.mount(
 
 
 # =====================================================
-# HTML Pages
+# HTML PAGES
 # =====================================================
 
 @app.get("/")
@@ -89,32 +89,32 @@ async def home():
 
 
 @app.get("/index.html")
-async def index_page():
+async def index():
     return FileResponse("templates/index.html")
 
 
 @app.get("/login")
-async def login_page():
+async def login():
     return FileResponse("templates/login.html")
 
 
 @app.get("/register")
-async def register_page():
+async def register():
     return FileResponse("templates/register.html")
 
 
 @app.get("/dashboard")
-async def dashboard_page():
+async def dashboard():
     return FileResponse("templates/dashboard.html")
 
 
 @app.get("/subscribe")
-async def subscribe_page():
+async def subscribe():
     return FileResponse("templates/subscribe.html")
 
 
 @app.get("/admin")
-async def admin_page():
+async def admin():
     return FileResponse("templates/admin.html")
 
 
@@ -134,282 +134,264 @@ async def favicon():
 
 
 # =====================================================
-# Health Check
+# HEALTH CHECK
 # =====================================================
 
 @app.get("/health")
 async def health():
+
     return {
         "status": "running",
-        "message": "JoshAI Karaoke Generator API"
+        "version": "3.0"
     }
 
 
 # =====================================================
-# Temporary Job Storage
+# JOB STORAGE
 # =====================================================
 
 jobs = {}
 
 
 # =====================================================
-# Utility
+# FILE HELPERS
 # =====================================================
 
 def delete_file(path):
+
     try:
+
         if os.path.exists(path):
             os.remove(path)
+
     except Exception:
         pass
 
 
 def delete_folder(path):
+
     try:
+
         if os.path.exists(path):
             shutil.rmtree(path)
+
     except Exception:
         pass
 
+
 # =====================================================
-# Background Worker
+# BACKGROUND WORKER
 # =====================================================
 
-def process_song(job_id: str, file_path: str):
+def process_song(job_id: str, filepath: str):
+
+    print("\n==============================")
+    print("THREAD STARTED")
+    print("JOB :", job_id)
+    print("FILE:", filepath)
+    print("==============================")
+
+    if job_id not in jobs:
+        print("Job Missing")
+        return
 
     try:
 
-        print("\n========================================")
-        print("Starting Job :", job_id)
-        print("Input File   :", file_path)
-        print("========================================")
-
-        if job_id not in jobs:
-            return
-
         jobs[job_id]["status"] = "processing"
 
-        # -------------------------------------
-        # Run Demucs
-        # -------------------------------------
+        print("Calling Demucs...")
 
-        karaoke_file = convert_to_karaoke(file_path)
+        karaoke_file = convert_to_karaoke(filepath)
 
-        # -------------------------------------
-        # Verify Output
-        # -------------------------------------
+        print("Demucs Finished")
 
         if not os.path.exists(karaoke_file):
-
-            raise Exception(
-                "Karaoke file was not generated."
-            )
+            raise Exception("Output file not found.")
 
         jobs[job_id]["status"] = "completed"
-
         jobs[job_id]["karaoke"] = karaoke_file
-
         jobs[job_id]["song"] = os.path.splitext(
-            os.path.basename(file_path)
+            os.path.basename(filepath)
         )[0]
 
-        print("\n========================================")
         print("Job Completed")
-        print("Output :", karaoke_file)
-        print("========================================")
-
-        # -------------------------------------
-        # Save History
-        # -------------------------------------
 
         try:
 
             db = SessionLocal()
 
             history = History(
-
                 user_id=jobs[job_id]["user_id"],
-
-                original_song=os.path.basename(file_path),
-
+                original_song=os.path.basename(filepath),
                 karaoke_song=os.path.basename(karaoke_file)
-
             )
 
             db.add(history)
-
             db.commit()
-
             db.close()
 
-            print("History Saved Successfully")
+            print("History Saved")
 
-        except Exception as history_error:
+        except Exception as e:
 
-            print("History Error :", history_error)
+            print("History Error")
+            print(e)
 
-        # -------------------------------------
-        # Delete Uploaded MP3
-        # -------------------------------------
-
-        delete_file(file_path)
+        delete_file(filepath)
 
     except Exception as e:
 
-        print("\n========================================")
+        traceback.print_exc()
+
+        jobs[job_id]["status"] = "failed"
+        jobs[job_id]["error"] = str(e)
+
+        delete_file(filepath)
+
         print("JOB FAILED")
         print(e)
-        print("========================================")
-
-        if job_id in jobs:
-
-            jobs[job_id]["status"] = "failed"
-
-            jobs[job_id]["error"] = str(e)
-
-        delete_file(file_path)
-
 # =====================================================
-# Upload API
+# UPLOAD API
 # =====================================================
+
 
 @app.post("/upload")
 async def upload(
     user_id: int = Form(...),
     file: UploadFile = File(...)
 ):
-
-    print("\n========== UPLOAD REQUEST ==========")
+    print("\n==============================")
+    print("UPLOAD REQUEST RECEIVED")
+    print("==============================")
 
     db = SessionLocal()
 
     try:
 
-        # -------------------------------------
-        # User Check
-        # -------------------------------------
-
+        # -----------------------------
+        # Check User
+        # -----------------------------
         user = db.query(User).filter(
             User.id == user_id
         ).first()
 
         if user is None:
-
             raise HTTPException(
                 status_code=404,
                 detail="User not found."
             )
 
-        # -------------------------------------
-        # Subscription Check
-        # -------------------------------------
-
+        # -----------------------------
+        # Check Subscription
+        # -----------------------------
         if user.role.lower() != "admin":
-
             if user.subscription_status.lower() != "active":
-
                 raise HTTPException(
                     status_code=403,
-                    detail="Subscription required."
+                    detail="Please purchase a subscription."
                 )
 
-        # -------------------------------------
-        # File Validation
-        # -------------------------------------
-
-        if file.filename is None:
-
+        # -----------------------------
+        # Validate File
+        # -----------------------------
+        if file.filename is None or file.filename.strip() == "":
             raise HTTPException(
                 status_code=400,
                 detail="No file selected."
             )
 
         if not file.filename.lower().endswith(".mp3"):
-
             raise HTTPException(
                 status_code=400,
                 detail="Only MP3 files are allowed."
             )
 
-        # -------------------------------------
-        # Save Uploaded File
-        # -------------------------------------
+        # -----------------------------
+        # Create Upload Folder
+        # -----------------------------
+        os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-        unique_name = str(uuid.uuid4())
+        # -----------------------------
+        # Save Original Song Name
+        # -----------------------------
+        original_name = os.path.splitext(file.filename)[0]
 
-        filename = unique_name + ".mp3"
+        # -----------------------------
+        # Safe Filename
+        # -----------------------------
+        unique_filename = (
+            f"{original_name}_{uuid.uuid4().hex[:8]}.mp3"
+        )
 
         filepath = os.path.join(
             UPLOAD_FOLDER,
-            filename
+            unique_filename
         )
 
+        # -----------------------------
+        # Save File
+        # -----------------------------
         with open(filepath, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
 
-            shutil.copyfileobj(
-                file.file,
-                buffer
-            )
+        print("File Saved :", filepath)
 
-        # -------------------------------------
-        # Create Job BEFORE Starting Thread
-        # -------------------------------------
-
+        # -----------------------------
+        # Create Job
+        # -----------------------------
         job_id = str(uuid.uuid4())
 
         jobs[job_id] = {
-
             "user_id": user.id,
-
             "status": "queued",
-
+            "song": original_name,
             "karaoke": None,
-
-            "song": None,
-
             "error": None
-
         }
 
-        # -------------------------------------
-        # Start Background Thread
-        # -------------------------------------
+        print("Job Created :", job_id)
 
+        # -----------------------------
+        # Background Thread
+        # -----------------------------
         thread = threading.Thread(
-
             target=process_song,
-
             args=(job_id, filepath),
-
             daemon=True
-
         )
 
         thread.start()
 
-        print("Job Created :", job_id)
+        print("Background Thread Started")
 
         return {
-
             "success": True,
-
             "job_id": job_id,
-
-            "status": "queued"
-
+            "status": "queued",
+            "song": original_name,
+            "message": "Upload Successful"
         }
 
-    finally:
+    except HTTPException:
+        raise
 
+    except Exception as e:
+        traceback.print_exc()
+
+        raise HTTPException(
+            status_code=500,
+            detail=str(e)
+        )
+
+    finally:
         db.close()
 
-
 # =====================================================
-# Status API
+# STATUS API
 # =====================================================
 
 @app.get("/status/{job_id}")
-async def get_status(job_id: str):
+async def status(job_id: str):
 
     if job_id not in jobs:
 
@@ -417,7 +399,7 @@ async def get_status(job_id: str):
 
             status_code=404,
 
-            detail="Invalid Job ID."
+            detail="Job not found."
 
         )
 
@@ -439,7 +421,7 @@ async def get_status(job_id: str):
 
 
 # =====================================================
-# Download API
+# DOWNLOAD API
 # =====================================================
 
 @app.get("/download/{job_id}")
@@ -448,11 +430,8 @@ async def download(job_id: str):
     if job_id not in jobs:
 
         raise HTTPException(
-
             status_code=404,
-
-            detail="Invalid Job ID."
-
+            detail="Job not found."
         )
 
     job = jobs[job_id]
@@ -460,21 +439,15 @@ async def download(job_id: str):
     if job["status"] == "failed":
 
         raise HTTPException(
-
             status_code=400,
-
             detail=job["error"]
-
         )
 
     if job["status"] != "completed":
 
         raise HTTPException(
-
             status_code=400,
-
             detail="Song is still processing."
-
         )
 
     karaoke_file = job["karaoke"]
@@ -482,22 +455,18 @@ async def download(job_id: str):
     if karaoke_file is None:
 
         raise HTTPException(
-
             status_code=404,
-
-            detail="Karaoke file missing."
-
+            detail="Output file missing."
         )
 
     if not os.path.exists(karaoke_file):
 
         raise HTTPException(
-
             status_code=404,
-
-            detail="Output file not found."
-
+            detail="Karaoke file not found."
         )
+
+    print("Download :", karaoke_file)
 
     return FileResponse(
 
@@ -508,3 +477,12 @@ async def download(job_id: str):
         media_type="audio/wav"
 
     )
+
+
+# =====================================================
+# END OF APP.PY
+# =====================================================
+
+print("===================================")
+print("JoshAI Karaoke Generator Started")
+print("===================================")

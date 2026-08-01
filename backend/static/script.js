@@ -11,12 +11,45 @@ const percent = document.querySelector(".percent");
 
 const downloadSection = document.getElementById("downloadSection");
 const downloadLink = document.getElementById("downloadLink");
+const uploadTitle = document.getElementById("uploadTitle");
+const fileInfo = document.getElementById("fileInfo");
 
 let timer = null;
 
 // =========================================
 // Convert Button
 // =========================================
+// =========================================
+// Show Selected MP3
+// =========================================
+
+songFile.addEventListener("change", () => {
+
+    if(songFile.files.length===0){
+
+        uploadTitle.innerHTML="Click to Choose MP3";
+
+        fileInfo.innerHTML="No MP3 selected";
+
+        fileInfo.classList.remove("has-file");
+
+        return;
+
+    }
+
+    const file=songFile.files[0];
+
+    const size=(file.size/1024/1024).toFixed(2);
+
+    uploadTitle.innerHTML="MP3 Selected ✅";
+
+    fileInfo.innerHTML=
+    `🎵 ${file.name}<br>
+     📦 ${size} MB`;
+
+    fileInfo.classList.add("has-file");
+
+});
 
 convertBtn.addEventListener("click", async () => {
 

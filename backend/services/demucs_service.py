@@ -1,28 +1,54 @@
-import subprocess
 import os
 import glob
+import shutil
+import subprocess
 
 OUTPUT_FOLDER = "ai_output"
 
 
 def convert_to_karaoke(input_file: str):
+    """
+    Converts an MP3 into karaoke (no vocals)
+    using Demucs and returns the generated file path.
+    """
 
     os.makedirs(OUTPUT_FOLDER, exist_ok=True)
 
+    # ---------------------------------
+    # Clean previous output
+    # ---------------------------------
+    for item in os.listdir(OUTPUT_FOLDER):
+        path = os.path.join(OUTPUT_FOLDER, item)
+
+        try:
+            if os.path.isdir(path):
+                shutil.rmtree(path)
+            else:
+                os.remove(path)
+        except Exception:
+            pass
+
+    # ---------------------------------
+    # Original filename
+    # ---------------------------------
+    original_name = os.path.splitext(
+        os.path.basename(input_file)
+    )[0]
+
     print("\n===================================")
-    print("Starting Demucs")
+    print("DEMUCS START")
     print("Input :", input_file)
     print("===================================")
 
     command = [
         "python",
         "-m",
-        "demucs",
+        "demucs.separate",
         "--two-stems",
         "vocals",
-        input_file,
         "-o",
-        OUTPUT_FOLDER
+        OUTPUT_FOLDER,
+        input_file
     ]
 
     print("Running Command:")
@@ -35,58 +61,60 @@ def convert_to_karaoke(input_file: str):
         text=True
     )
 
-    print("\n========== DEMUCS STDOUT ==========")
+    print("\n========== STDOUT ==========")
     print(process.stdout)
 
-    print("\n========== DEMUCS STDERR ==========")
+    print("\n========== STDERR ==========")
     print(process.stderr)
 
     if process.returncode != 0:
-
         raise Exception(
-            "Demucs Error:\n" + process.stderr
+            "Demucs failed.\n\n" +
+            process.stderr
         )
 
-    print("\nSearching output file...")
-
+    # ---------------------------------
+    # Search generated no_vocals.wav
+    # ---------------------------------
     files = glob.glob(
-
         os.path.join(
             OUTPUT_FOLDER,
             "**",
             "no_vocals.wav"
         ),
-
         recursive=True
-
     )
 
-    if len(files) == 0:
+    if not files:
+        raise Exception("no_vocals.wav not found.")
 
-        raise Exception(
-            "Demucs finished but no_vocals.wav not found."
-        )
+    generated_file = max(
+        files,
+        key=os.path.getmtime
+    )
 
-    karaoke_file = files[0]
+    # ---------------------------------
+    # Rename output
+    # ---------------------------------
+    final_output = os.path.join(
+        OUTPUT_FOLDER,
+        f"{original_name}_Karaoke.wav"
+    )
+
+    shutil.copy2(generated_file, final_output)
 
     print("\n===================================")
-    print("Karaoke Created Successfully")
-    print(karaoke_file)
+    print("SUCCESS")
+    print(final_output)
     print("===================================")
 
-    return karaoke_file
+    return final_output
 
 
 def delete_file(filepath):
-
     try:
-
         if filepath and os.path.exists(filepath):
-
             os.remove(filepath)
-
             print("Deleted :", filepath)
-
     except Exception as e:
-
-        print("Delete Error :", e)
+        print(e)
